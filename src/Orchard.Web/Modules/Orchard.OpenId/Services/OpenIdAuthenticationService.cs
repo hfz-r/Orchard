@@ -5,13 +5,14 @@ using System.Web.Security;
 using Orchard.Environment.Configuration;
 using Orchard.Environment.Extensions;
 using Orchard.Mvc;
+using Orchard.Mvc.Extensions;
 using Orchard.Security;
 using Orchard.Security.Providers;
 using Orchard.Services;
 
 namespace Orchard.OpenId.Services {
     [OrchardFeature("Orchard.OpenId")]
-    public class OpenIdAuthenticationService : IAuthenticationService {
+    public class OpenIdAuthenticationService : IAuthenticationService, IOpenIdAuthenticationService {
         private readonly ShellSettings _settings;
         private readonly IClock _clock;
         private readonly IMembershipService _membershipService;
@@ -102,8 +103,14 @@ namespace Orchard.OpenId.Services {
             return _localAuthenticationUser = localUser;
         }
 
-        private bool IsLocalUser() {
-            var anyClaim = _httpContextAccessor.Current().GetOwinContext().Authentication.User.Claims.FirstOrDefault();
+        public bool IsLocalUser() {
+            var httpContext = _httpContextAccessor.Current();
+
+            if (httpContext.IsBackgroundContext()) {
+                return true;
+            }
+
+            var anyClaim = httpContext.GetOwinContext().Authentication.User.Claims.FirstOrDefault();
 
             if (anyClaim == null || anyClaim.Issuer == Constants.General.LocalIssuer || anyClaim.Issuer == Constants.General.FormsIssuer) {
                 return true;
